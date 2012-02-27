@@ -39,7 +39,7 @@ class MainWindow:
 
 
         #程序logo
-        window.set_icon_from_file(ICON + "logo.png")
+        #window.set_icon_from_file(ICON + "logo.png")
 
         #启用RGBA透明支持
         screen   = window.get_screen()
