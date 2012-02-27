@@ -1,8 +1,8 @@
 ULIBINC	= include/
 ULIBLIB = lib/
 
-TARGET	= pwgen tree
-OBJS	= pwgen.o tree.o
+TARGET	= pwgen 
+OBJS	= pwgen.o 
 
 CC	?= gcc
 CFLAGS	?= -c -O3 -g3 -W -Wall -pipe -DNDEBUG
