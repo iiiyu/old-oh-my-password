@@ -24,6 +24,7 @@ import gtk
 import gobject
 from draw import *
 from utils import *
+import copy
 
 class ListView(gtk.DrawingArea):
     '''List view.'''
@@ -32,7 +33,7 @@ class ListView(gtk.DrawingArea):
     SORT_ASCENDING = False
     SORT_PADDING_X = 5
 	
-    def __init__(self, items, titles=None, sorts=None, title_height=24):
+    def __init__(self):
         '''Init list view.'''
         # Init.
         gtk.DrawingArea.__init__(self)
@@ -41,54 +42,71 @@ class ListView(gtk.DrawingArea):
         self.add_events(gtk.gdk.BUTTON_RELEASE_MASK)
         self.add_events(gtk.gdk.ENTER_NOTIFY_MASK)
         self.add_events(gtk.gdk.LEAVE_NOTIFY_MASK)
-        self.items = items
-        self.titles = titles
+        self.items = []
         self.cell_widths = []
-        self.title_select_column = None
+        self.cell_min_widths = []
+        self.cell_min_heights = []
         self.button_press = False
+        self.hover_row = None
+        self.titles = None
+        self.title_offset_y = 0
+        self.item_height = 0
+        
+        # Signal.
+        self.connect("expose-event", self.expose_list_view)    
+        self.connect("motion-notify-event", self.motion_list_view)
+        self.connect("button-press-event", self.button_press_list_view)
+        self.connect("button-release-event", self.button_release_list_view)
+        self.connect("leave-notify-event", self.leave_list_view)
+        
+    def add_titles(self, titles, title_height=24):
+        '''Add titles.'''
+        self.titles = titles
+        self.title_select_column = None
         self.title_adjust_column = None
+        self.title_separator_width = 2
         self.title_clicks = map_value(self.titles, lambda _: False)
         self.title_sorts = map_value(self.titles, lambda _: self.SORT_DESCENDING)
-        self.title_separator_width = 2
-        self.hover_row = None
         self.set_title_height(title_height)
         
-        # Set size.
-        if len(items) > 0:
-            title_sizes = map_value(self.titles, lambda title: get_content_size(title, DEFAULT_FONT_SIZE))
-            sort_pixbuf = theme.get_dynamic_pixbuf("listview/sort_descending.png").get_pixbuf()
-            sort_icon_width = sort_pixbuf.get_width() + self.SORT_PADDING_X * 2
-            sort_icon_height = sort_pixbuf.get_height()
+    def add_items(self, items):
+        '''Add items in list.'''
+        # Add new items.
+        self.items += items
+
+        # Re-calcuate.
+        title_sizes = map_value(self.titles, lambda title: get_content_size(title, DEFAULT_FONT_SIZE))
+        sort_pixbuf = theme.get_dynamic_pixbuf("listview/sort_descending.png").get_pixbuf()
+        sort_icon_width = sort_pixbuf.get_width() + self.SORT_PADDING_X * 2
+        sort_icon_height = sort_pixbuf.get_height()
+        
+        cell_min_sizes = []
+        for item in items:
+            sizes = item.get_column_sizes()
+            if cell_min_sizes == []:
+                cell_min_sizes = sizes
+            else:
+                for (index, (width, height)) in enumerate(sizes):
+                    if self.titles == None:
+                        max_width = max([cell_min_sizes[index][0], width])
+                        max_height = max([cell_min_sizes[index][1], sort_icon_height, height])
+                    else:
+                        max_width = max([cell_min_sizes[index][0], title_sizes[index][0] + sort_icon_width * 2, width])
+                        max_height = max([cell_min_sizes[index][1], title_sizes[index][1], sort_icon_height, height])
+                    
+                    cell_min_sizes[index] = (max_width, max_height)
+        
+        # Get value.
+        (cell_min_widths, cell_min_heights) = unzip(cell_min_sizes)
+        self.cell_min_widths = mix_list_max(self.cell_min_widths, cell_min_widths)
+        self.cell_min_heights = mix_list_max(self.cell_min_heights, cell_min_heights)
+        self.cell_widths = mix_list_max(self.cell_widths, copy.deepcopy(cell_min_widths))
             
-            self.cell_min_sizes = []
-            for item in items:
-                sizes = item.get_column_sizes()
-                if self.cell_min_sizes == []:
-                    self.cell_min_sizes = sizes
-                else:
-                    for (index, (width, height)) in enumerate(sizes):
-                        if self.titles == None:
-                            max_width = max([self.cell_min_sizes[index][0], width])
-                            max_height = max([self.cell_min_sizes[index][1], sort_icon_height, height])
-                        else:
-                            max_width = max([self.cell_min_sizes[index][0], title_sizes[index][0] + sort_icon_width * 2, width])
-                            max_height = max([self.cell_min_sizes[index][1], title_sizes[index][1], sort_icon_height, height])
-                        
-                        self.cell_min_sizes[index] = (max_width, max_height)
-            
-            self.cell_min_widths, self.cell_min_heights = zip(*self.cell_min_sizes)
-            self.cell_widths = list(self.cell_min_widths)
-            self.item_height = max(self.cell_min_heights)
-    
-            # Set size request.
-            self.set_size_request(sum(self.cell_min_widths), self.item_height * len(items) + self.title_offset_y)
-            
-            # Signal.
-            self.connect("expose-event", self.expose_list_view)    
-            self.connect("motion-notify-event", self.motion_list_view)
-            self.connect("button-press-event", self.button_press_list_view)
-            self.connect("button-release-event", self.button_release_list_view)
-            self.connect("leave-notify-event", self.leave_list_view)
+        self.item_height = max(self.item_height, max(copy.deepcopy(cell_min_heights)))    
+                    
+        # Set size request.
+        if len(self.items) > 0:
+            self.set_size_request(sum(self.cell_min_widths), self.item_height * len(self.items) + self.title_offset_y)
             
     def set_title_height(self, title_height):
         '''Set title height.'''
@@ -116,7 +134,7 @@ class ListView(gtk.DrawingArea):
     
     def set_cell_width(self, column, width):
         '''Set cell width.'''
-        if column <= len(self.cell_min_sizes) - 1 and width >= self.cell_min_sizes[column][0]:
+        if column <= len(self.cell_min_widths) - 1 and width >= self.cell_min_widths[column]:
             self.cell_widths[column] = width
             
     def set_adjust_cursor(self):
@@ -151,15 +169,6 @@ class ListView(gtk.DrawingArea):
         
         # Get offset.
         (offset_x, offset_y, viewport) = self.get_offset_coordinate(widget)
-        
-        # Get viewport index.
-        start_y = offset_y - self.title_offset_y
-        end_y = offset_y + viewport.allocation.height - self.title_offset_y
-        start_index = max(start_y / self.item_height, 0)
-        if (end_y - end_y / self.item_height * self.item_height) == 0:
-            end_index = min(end_y / self.item_height + 1, len(self.items))
-        else:
-            end_index = min(end_y / self.item_height + 2, len(self.items))        
             
         # Draw background.
         pixbuf = theme.get_dynamic_pixbuf(BACKGROUND_IMAGE).get_pixbuf().subpixbuf(
@@ -173,35 +182,46 @@ class ListView(gtk.DrawingArea):
         draw_vlinear(cr, offset_x, offset_y, viewport.allocation.width, viewport.allocation.height,
                      theme.get_dynamic_shadow_color("linearBackground").get_color_info())
             
-        # Save cairo status.
-        cr.save()
-        
-        # Don't draw any item under title area.
-        cr.rectangle(offset_x, offset_y + self.title_offset_y,
-                      viewport.allocation.width, viewport.allocation.height - self.title_offset_y)        
-        cr.clip()
-        
-        # Draw hover row.
-        if self.hover_row != None:
-            draw_vlinear(cr, offset_x, self.title_offset_y + self.hover_row * self.item_height,
-                         viewport.allocation.width, self.item_height,
-                         theme.get_dynamic_shadow_color("listviewHover").get_color_info())
-        
-        # Draw list item.
-        for (row, item) in enumerate(self.items[start_index:end_index]):
-            renders = item.get_renders()
-            for (column, render) in enumerate(renders):
-                cell_width = cell_widths[column]
-                cell_x = sum(cell_widths[0:column])
-                render(cr, gtk.gdk.Rectangle(
-                        rect.x + cell_x,
-                        rect.y + (row + start_index) * self.item_height + self.title_offset_y,
-                        cell_width, 
-                        self.item_height
-                        ))
-        
-        # Restore cairo status to draw title area.
-        cr.restore()        
+        if len(self.items) > 0:
+            # Save cairo status.
+            cr.save()
+            
+            # Don't draw any item under title area.
+            cr.rectangle(offset_x, offset_y + self.title_offset_y,
+                          viewport.allocation.width, viewport.allocation.height - self.title_offset_y)        
+            cr.clip()
+            
+            # Draw hover row.
+            if self.hover_row != None:
+                draw_vlinear(cr, offset_x, self.title_offset_y + self.hover_row * self.item_height,
+                             viewport.allocation.width, self.item_height,
+                             theme.get_dynamic_shadow_color("listviewHover").get_color_info())
+            
+            
+            # Get viewport index.
+            start_y = offset_y - self.title_offset_y
+            end_y = offset_y + viewport.allocation.height - self.title_offset_y
+            start_index = max(start_y / self.item_height, 0)
+            if (end_y - end_y / self.item_height * self.item_height) == 0:
+                end_index = min(end_y / self.item_height + 1, len(self.items))
+            else:
+                end_index = min(end_y / self.item_height + 2, len(self.items))        
+                
+            # Draw list item.
+            for (row, item) in enumerate(self.items[start_index:end_index]):
+                renders = item.get_renders()
+                for (column, render) in enumerate(renders):
+                    cell_width = cell_widths[column]
+                    cell_x = sum(cell_widths[0:column])
+                    render(cr, gtk.gdk.Rectangle(
+                            rect.x + cell_x,
+                            rect.y + (row + start_index) * self.item_height + self.title_offset_y,
+                            cell_width, 
+                            self.item_height
+                            ))
+            
+            # Restore cairo status to draw title area.
+            cr.restore()        
             
         # Draw titles.
         if self.titles:
@@ -286,10 +306,7 @@ class ListView(gtk.DrawingArea):
                             self.title_select_column = None
                             self.set_adjust_cursor()
                             break
-                        
-                    # Reset hover row.
-                    self.hover_row = None    
-                else:
+                elif len(self.items) > 0:
                     # Rest cursor and title select column.
                     self.title_select_column = None
                     self.reset_cursor()
@@ -300,7 +317,7 @@ class ListView(gtk.DrawingArea):
                 
             # Redraw after motion.
             self.queue_draw()
-        else:
+        elif len(self.items) > 0:
             # Rest cursor and title select column.
             self.title_select_column = None
             self.reset_cursor()

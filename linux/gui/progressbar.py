@@ -61,22 +61,21 @@ class ProgressBar(gtk.Button):
                      theme.get_dynamic_shadow_color("progressbarBackground").get_color_info(), 
                      1)
     
-        
         # Draw foreground.
         draw_vlinear(cr, rect.x, rect.y, rect.width * self._progress / 100.0, rect.height, 
                      theme.get_dynamic_shadow_color("progressbarForeground").get_color_info(), 
                      1)
         
         # Draw font.
-        draw_font(cr, str(self.progress) + "%", 16, "#FFFF00", rect.x, rect.y, rect.width, rect.height)
+        draw_font(cr, str(self.progress) + "%", rect.height - 4, "#000000", rect.x, rect.y, rect.width, rect.height)
         
         # Draw light.
         light_radius = rect.height * 4
-        light_offset_x = min(self.light_ticker % 150, 100) / 100.0 * rect.width
+        light_offset_x = min(self.light_ticker % 150, 100) / 100.0 * (rect.width + light_radius * 2)
         cr.save()
         cr.rectangle(rect.x, rect.y, rect.width * self._progress / 100.0, rect.height)
         cr.clip()
-        draw_radial_round(cr, rect.x + light_offset_x, rect.y - light_radius / 2, light_radius, 
+        draw_radial_round(cr, rect.x + light_offset_x - light_radius, rect.y - light_radius / 2, light_radius, 
                           theme.get_dynamic_shadow_color("progressbarLight").get_color_info())
         cr.restore()
                
@@ -130,7 +129,7 @@ if __name__ == "__main__":
     window.connect("destroy", lambda w: gtk.main_quit())
     
     window.show_all()
-    progressbar.set_size_request(800,80)
-    progressbar.progress = 50
-    #gtk.timeout_add(100, progressbar.test_progressbar)
+    # progressbar.set_size_request(800,80)
+    # progressbar.progress = 50
+    gtk.timeout_add(100, progressbar.test_progressbar)
     gtk.main()

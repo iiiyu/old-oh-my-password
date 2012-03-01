@@ -116,8 +116,13 @@ def expose_window_background(widget, event, background_path, alpha, mask_dcolor)
     pixbuf = theme.get_dynamic_pixbuf(background_path).get_pixbuf()
     rect = widget.allocation
     
+    # Clear color to transparent window.
+    cr.set_source_rgba(0.0, 0.0, 0.0, 0.0)
+    cr.set_operator(cairo.OPERATOR_SOURCE)
+    cr.paint()
+        
     # Draw background.
-    draw_pixbuf(cr, pixbuf)
+    draw_pixbuf(cr, pixbuf, rect.x, rect.y, 0.8)
     
     # Draw mask.
     cr.set_source_rgb(*color_hex_to_cairo(theme.get_dynamic_color(mask_dcolor).get_color()))

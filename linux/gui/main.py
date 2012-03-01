@@ -33,6 +33,13 @@ from listview import *
 from tooltip import *
 from popupWindow import *
 
+def test(viewport):
+    '''docs'''
+    print viewport.get_view_window()
+    print viewport.get_bin_window()
+    view_window = viewport.get_view_window()
+    view_window.set_back_pixmap(None, True)
+
 if __name__ == "__main__":
     # Init application.
     application = Application()
@@ -74,9 +81,9 @@ if __name__ == "__main__":
          ("navigatebar/nav_uninstall.png", "导航8", None),
          ]
         )
-    #application.main_box.pack_start(navigatebar.nav_event_box, False)
-    #application.add_move_window_event(navigatebar.nav_event_box)
-    #application.add_toggle_window_event(navigatebar.nav_event_box)
+    application.main_box.pack_start(navigatebar.nav_event_box, False)
+    application.add_move_window_event(navigatebar.nav_event_box)
+    application.add_toggle_window_event(navigatebar.nav_event_box)
     
     # Add body box.
     body_box = gtk.HBox()
@@ -109,11 +116,16 @@ if __name__ == "__main__":
                                        "林俊杰 %04d" % index,
                                        "10:30",
                                        "listen.png"),
-                range(0, 1000))
-    # list_view = ListView(items, ["图标", "歌名", "歌手", "时间", "试听"])
-    list_view = ListView(items)
+                range(0, 100))
+    list_view = ListView()
+    list_view.add_titles(["图标", "歌名", "歌手", "时间", "试听"])
+    list_view.add_items(items)
     
-    #scrolled_window.add_child(list_view)
+    scrolled_window.add_child(list_view)
+    
+    # viewport = gtk.Viewport()
+    # viewport.connect_after("show", test)
+    # category_box.pack_start(viewport, True, True)
     
     # Add statusbar.
     statusbar = Statusbar(36)

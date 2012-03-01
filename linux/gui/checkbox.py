@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-# -*- coding: utf-8 -*-
 
 # Copyright (C) 2011 ~ 2012 Deepin, Inc.
 #               2011 ~ 2012 Qiu Hailong
@@ -22,21 +21,25 @@
 
 
 from draw import *
-
+import gobject
 
 class CheckBox(gtk.Button):
-    '''Check.'''
-	
+    '''CheckBox.'''
+    __gsignals__ = {
+        "changed":(gobject.SIGNAL_RUN_LAST,
+                   gobject.TYPE_NONE,(gobject.TYPE_INT,))
+        }
+    
     def __init__(self):
         '''Init.'''        
         gtk.Button.__init__(self)
-        self._checked = False
-        self._size = 20,20
-        self._motion = False
+        self.checked = False
+        self.motion = False
         
         self.add_events(gtk.gdk.POINTER_MOTION_MASK)
-        # Init checkbox width and height
         self.set_size_request(20, 20)
+        
+        # Add events mask
         self.connect("expose-event", self.expose_checkbox)
         self.connect("enter-notify-event", self.enter_notify_checkbox)
         self.connect("leave-notify-event", self.leave_notify_checkbox)
@@ -46,93 +49,61 @@ class CheckBox(gtk.Button):
         '''Expose radio.'''
         cr = widget.window.cairo_create()
         rect = widget.allocation
-        self.draw_checkbox(cr, rect.x, rect.y, rect.width, rect.height)
-        return True
         
-    def draw_checkbox(self, cr, x, y, w, h):    
+        (x, y, w, h) = rect.x, rect.y, rect.width, rect.height
+        
         '''Draw checkbox.'''     
         # CheckBox linear.
-        if self._motion:
-            draw_vlinear(cr, x, y, w, h, theme.get_dynamic_shadow_color("hSeparator").get_color_info())
+        if self.motion:
+            draw_vlinear(cr, x, y, w, h, theme.get_dynamic_shadow_color("progressbarBackground").get_color_info())
         
-        # Checkbox border
+        # Checkbox border.
+        cr.set_line_width(0.2)
         cr.set_source_rgb(0, 0.3, 0)
         draw_round_rectangle(cr, x+2, y+2, w-4, h-4, 0.5)
         cr.stroke()
-            
+        
+        # Checkbox border backgourd.
         cr.set_source_rgb(1,1,1)
         cr.rectangle(x+3, y+3, w-6, h-6)
         cr.fill()
-
-        #Checkbox border white background.
-        #draw_vlinear(cr, x+3, y+3, w-6, h-6, theme.get_dynamic_shadow_color("progressbarLight").get_color_info())
-        
-        # Draw radio checked.
+    
         if self.checked:
-            #draw_radial_round(cr, x+w/2, y+h/2, w/6, theme.get_dynamic_shadow_color("progressbarForeground").get_color_info())
-            cr.set_source_rgb(0,1,0)
-            cr.line_to(20,20)
-            cr.move_to(x+w,y+h)
-            cr.stroke()
+            print self.checked
+            #draw checked state
+            cr.set_line_width(0.5)
+            cr.set_source_rgba(0,0.6,0,0.5)
+            for i in range(0,4):
+                cr.move_to(x+i+4, y+h/2)
+                cr.line_to(x+w/2, y+h-i-4)
+                cr.line_to(x+w-i-4, y+i+4)
             
+                cr.stroke()
+            
+        return True
+    
     def leave_notify_checkbox(self, widget, event):
-        self._motion = False
-        print 'leave checkbox event'
+        self.motion = False
 
     def button_press_checkbox(self, widget, event):
         '''Press checkbox'''
         if event.button == 1:
-            self.checked = (not self._checked)
-            self._motion = True
-            print 'clicked checkbox event %s' % self.checked
+            self.checked = (not self.checked)
+            self.motion = True
 
     def enter_notify_checkbox(self, widget, event):
         '''Press checkbox.'''
-        self._motion = True
-        print 'motion checkbox event'
+        self.motion = True
         
-    
-    # set radio size(width, height).
-    @property
-    def size(self):
-        return self._size    
-    
-    @size.setter
-    def size(self, (width,height)):
-        '''Set checked width and height.'''
-        self._size = width, height
-        self.set_size_request(width, height)
-        
-    @size.getter
-    def size(self):
-        '''Get checked width and height.'''
-        return self._size
-    
-    @size.deleter
-    def size(self):
-        del self._size
-    
-    # Set radio checked.
-    @property
-    def checked(self):
-        return self._checked
-    
-    @checked.setter
-    def checked(self, radio_bool):
+    def toggle(self, radio_bool):
         '''Checked radio'''
-        self._checked = radio_bool
+        self.emit("changed", int(self.checked))
+        self.checked = radio_bool
         self.queue_draw()
         
-    @checked.getter
-    def checked(self):
-        return self._checked
-
-    @checked.deleter
-    def checked(self):
-        del self._checked
-    
-        
+          
 if __name__ == "__main__":
+    # Test func.
     window = gtk.Window()    
     fixed  = gtk.Fixed()
     
@@ -140,9 +111,7 @@ if __name__ == "__main__":
     checkbox1 = CheckBox()
     checkbox2 = CheckBox()
 
-    checkbox.size = 85, 85
-    checkbox1.size = 30, 30
-    checkbox2.size = 20,20
+    checkbox.set_size_request(80, 80)
     fixed.put(checkbox,  30, 40)
     fixed.put(checkbox1, 30, 130)
     fixed.put(checkbox2, 30, 180)

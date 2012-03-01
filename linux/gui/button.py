@@ -24,6 +24,7 @@ from draw import *
 import gtk
 import gobject
 
+
 class Button(gtk.Button):
     '''Font button.'''
 	
@@ -77,10 +78,10 @@ gobject.type_register(CloseButton)
 class MaxButton(gtk.Button):
     '''Max button.'''
 	
-    def __init__(self, has_max_callback, sub_dir="button", max_path_prefix="window_max", unmax_path_prefix="window_unmax"):
+    def __init__(self,sub_dir="button", max_path_prefix="window_max", unmax_path_prefix="window_unmax"):
         '''Init max button.'''
         gtk.Button.__init__(self)
-        draw_max_button(self, sub_dir, max_path_prefix, unmax_path_prefix, has_max_callback)
+        draw_max_button(self, sub_dir, max_path_prefix, unmax_path_prefix)
         
 gobject.type_register(MaxButton)
 
@@ -150,7 +151,7 @@ def expose_button(widget, event,
     
     return True
 
-def draw_max_button(widget, sub_dir, max_path_prefix, unmax_path_prefix, has_max_callback):
+def draw_max_button(widget, sub_dir, max_path_prefix, unmax_path_prefix):
     '''Create max button.'''
     # Init request size.
     pixbuf = theme.get_dynamic_pixbuf("%s/%s_normal.png" % (sub_dir, unmax_path_prefix)).get_pixbuf()
@@ -158,12 +159,12 @@ def draw_max_button(widget, sub_dir, max_path_prefix, unmax_path_prefix, has_max
     
     # Redraw.
     widget.connect("expose-event", lambda w, e: 
-                   expose_max_button(w, e, sub_dir, max_path_prefix, unmax_path_prefix, has_max_callback))
-
-def expose_max_button(widget, event, sub_dir, max_path_prefix, unmax_path_prefix, has_max_callback):
+                   expose_max_button(w, e, sub_dir, max_path_prefix, unmax_path_prefix))
+                
+def expose_max_button(widget, event, sub_dir, max_path_prefix, unmax_path_prefix):
     '''Expose function to replace event box's image.'''
     # Get dynamic pixbuf.
-    if has_max_callback():
+    if window_is_max(widget):
         normal_dpixbuf = theme.get_dynamic_pixbuf("%s/%s_normal.png" % (sub_dir, unmax_path_prefix))
         hover_dpixbuf = theme.get_dynamic_pixbuf("%s/%s_hover.png" % (sub_dir, unmax_path_prefix))
         press_dpixbuf = theme.get_dynamic_pixbuf("%s/%s_press.png" % (sub_dir, unmax_path_prefix))

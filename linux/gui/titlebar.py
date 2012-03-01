@@ -26,14 +26,12 @@ from button import *
 from box import *
 import gtk
 import utils
+import gobject
 
 class Titlebar(object):
-    '''Title bar.'''
+    '''Title bar.'''    
     
-    def __init__(self, close_callback, 
-                 theme_callback=None, menu_callback=None, 
-                 min_callback=None, max_callback=None, 
-                 get_max_status=None):
+    def __init__(self, button_mask=["theme", "menu", "max", "min", "close"]):
         '''Init titlebar.'''
         # Init.
         self.box = EventBox()
@@ -52,33 +50,48 @@ class Titlebar(object):
         self.layout_box.pack_start(self.button_align, False, False)
         
         # Add theme button.
-        if theme_callback:
+        if "theme" in button_mask:
             self.theme_button = ThemeButton()
-            self.theme_button.connect("clicked", lambda w: theme_callback(w)) # 
             self.button_box.pack_start(self.theme_button, False, False)
 
         # Add menu button.
-        if menu_callback:
+        if "menu" in button_mask:
             self.menu_button = MenuButton()
-            self.menu_button.connect("clicked", lambda w: menu_callback(w))
             self.button_box.pack_start(self.menu_button, False, False)
         
         # Add min button.
-        if min_callback:
+        if "min" in button_mask:
             self.min_button = MinButton()
-            self.min_button.connect("clicked", lambda w: min_callback())
             self.button_box.pack_start(self.min_button, False, False)
         
         # Add max button.
-        if max_callback:
-            self.max_button = MaxButton(get_max_status)
-            self.max_button.connect("clicked", lambda w: max_callback())
+        if "max" in button_mask:
+            self.max_button = MaxButton()
             self.button_box.pack_start(self.max_button, False, False)
 
         # Add close button.
-        self.close_button = CloseButton()
-        self.close_button.connect("clicked", lambda w: close_callback())
-        self.button_box.pack_start(self.close_button, False, False)
+        if "close" in button_mask:
+            self.close_button = CloseButton()
+            self.button_box.pack_start(self.close_button, False, False)
         
         # Show.
         self.box.show_all()
+    
+if __name__ == "__main__":
+    
+    def max_signal(w):    
+        if window_is_max(w):
+            win.unmaximize()
+            print "min"
+        else:
+            win.maximize()
+            print "max"
+
+    win = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    win.connect("destroy", gtk.main_quit)
+    tit = Titlebar()
+    tit.max_button.connect("clicked", max_signal)
+    win.add(tit.box)
+    win.show_all()
+    
+    gtk.main()

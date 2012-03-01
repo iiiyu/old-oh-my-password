@@ -479,3 +479,36 @@ def get_match_widgets(widget, type_name):
         return []
     else:
         return filter(lambda w:type(widget).__name__ == type_name, parent.get_children())
+
+def mix_list_max(list_a, list_b):
+    '''Mix max item in two list.'''
+    if list_a == []:
+        return list_b
+    elif list_b == []:
+        return list_a
+    elif len(list_a) == len(list_b):
+        result = []
+        for (index, item_a) in list_a:
+            if item_a > list_b[index]:
+                result.append(item_a)
+            else:
+                result.append(list_b[index])
+        
+        return result        
+    else:
+        print "mix_list_max: two list's length not same."
+        return []
+
+def unzip(unzip_list):
+    '''Unzip [(1, 'a'), (2, 'b'), (3, 'c')] to ([1, 2, 3], ['a', 'b', 'c']).'''
+    first_list, second_list = zip(*unzip_list)
+    return (list(first_list), list(second_list))
+
+def window_is_max(widget):
+    '''Whether window is maximized status.'''
+    toplevel_window = widget.get_toplevel()
+    if toplevel_window.window.get_state() == gtk.gdk.WINDOW_STATE_MAXIMIZED:
+        return True
+    else:
+        return False
+

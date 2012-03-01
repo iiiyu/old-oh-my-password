@@ -71,7 +71,6 @@ class Application(object):
         gtk.gdk.threads_init()
 
         # Init status.
-        self.has_max = False
         self.cursor_type = None
         self.menu_button_callback = None
         
@@ -83,6 +82,7 @@ class Application(object):
         self.window.add_events(gtk.gdk.POINTER_MOTION_MASK)
         self.window.add_events(gtk.gdk.BUTTON_PRESS_MASK)
         self.window.add_events(gtk.gdk.BUTTON_RELEASE_MASK)
+        self.window.set_colormap(gtk.gdk.Screen().get_rgba_colormap())
         self.window.connect("size-allocate", draw_window_shape)
         self.window.connect("destroy", self.destroy)
         self.window.connect("motion-notify-event", self.motion_notify)
@@ -109,14 +109,12 @@ class Application(object):
         self.window.add(self.frame_vbox)
         
         # Init titlebar.
-        self.titlebar = Titlebar(
-            self.close_callback,
-            self.theme_callback,
-            self.menu_callback,
-            self.min_callback,
-            self.max_callback,
-            self.get_max_status,
-            )
+        self.titlebar = Titlebar()
+        self.titlebar.theme_button.connect("clicked", self.theme_callback)
+        self.titlebar.menu_button.connect("clicked", self.menu_callback)
+        self.titlebar.min_button.connect("clicked", self.min_callback)
+        self.titlebar.max_button.connect("clicked", self.max_callback)
+        self.titlebar.close_button.connect("clicked", self.close_callback)
         self.add_toggle_window_event(self.titlebar.drag_box)
         self.add_move_window_event(self.titlebar.drag_box)
         self.main_box.pack_start(self.titlebar.box, False)
@@ -165,30 +163,30 @@ class Application(object):
         # Run main loop.
         gtk.main()
 
-    def theme_callback(self, button):
+    def theme_callback(self, widget):
         '''Theme button callback.'''
         return False
     
-    def menu_callback(self, button):
+    def menu_callback(self, widget):
         '''Menu button callback.'''
         if self.menu_button_callback:
-            self.menu_button_callback(button)
+            self.menu_button_callback(widget)
         
         return False
     
-    def min_callback(self):
+    def min_callback(self, widget):
         '''Min button callback.'''
         self.window.iconify()
 
         return False
 
-    def max_callback(self):
+    def max_callback(self, widget):
         '''Max button callback.'''
         self.toggle_window()
     
         return False
     
-    def close_callback(self):
+    def close_callback(self, widget):
         '''Close button callback.'''
         # Hide window immediately when user click close button,
         # user will feeling this software very quick, ;p
@@ -205,18 +203,13 @@ class Application(object):
             
         return False
             
-    def get_max_status(self):
-        '''Get max status.'''
-        return self.has_max
-            
     def toggle_window(self):
         '''Toggle window.'''
-        if self.has_max:
+        window_state = self.window.window.get_state()
+        if window_state == gtk.gdk.WINDOW_STATE_MAXIMIZED:
             self.window.unmaximize()
         else:
             self.window.maximize()
-
-        self.has_max = not self.has_max
         
     def add_toggle_window_event(self, widget):
         '''Add toggle window event.'''

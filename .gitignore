@@ -1,0 +1,6 @@
+*.pyc
+defaultTheme
+nohup.out
+.#*
+*.~
+build
